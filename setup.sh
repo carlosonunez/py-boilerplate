@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
+BOILERPLATE_ZIP_URL=https://github.com/carlosonunez/py-boilerplate/archive/latest.zip
 BOILERPLATE_FILE_NAME=boilerplate.zip
-GITHUB_REPO_NAME=py-boilerplate # change this if forking and renaming
-GITHUB_USERNAME=carlosonunez # change this if forking
 fetch_latest_boilerplate() {
-  curl -o "$BOILERPLATE_FILE_NAME" \
-    https://github.com/$GITHUB_USERNAME/$GITHUB_REPO_NAME/archive/latest.zip
+  curl -o "$BOILERPLATE_FILE_NAME" "$BOILERPLATE_ZIP_URL"
 }
 
 unzip_to_current_directory() {
