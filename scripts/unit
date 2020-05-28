@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# I'm using a simple sleep to wait on the database here.
+# In a real-world scenario, I would have our application image wait
+# on dependencies such as the database before starting.
+docker-compose build unit && \
+  docker-compose up -d database && \
+  sleep 1 && \
+  docker-compose run --rm unit;
+docker-compose down
