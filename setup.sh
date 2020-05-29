@@ -6,7 +6,7 @@ fetch_latest_boilerplate() {
 }
 
 unzip_to_current_directory() {
-  unzip "$BOILERPLATE_FILE_NAME" -d .
+  unzip "$BOILERPLATE_FILE_NAME" -d ..
 }
 
 delete_boilerplate_zip() {
