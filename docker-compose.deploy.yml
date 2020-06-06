@@ -1,0 +1,81 @@
+version: '2.2'
+services:
+  # Remove this if you don't wish to deploy to a serverless environment
+  # like AWS Lambda, Azure Functions or Google Cloud Functions.
+  # NOTE: The serverless functions assume that you're deploying to
+  # /v1/ in production and /develop/ in develop.
+  # See the services below to change this.
+  serverless:
+    build:
+      dockerfile: serverless.Dockerfile
+      context: .
+    environment:
+      ENVIRONMENT: test
+    volumes:
+      - $PWD:/app
+    working_dir: /app
+  terraform:
+    image: hashicorp/terraform # You should pin this to a specific version.
+    environment:
+      - TF_CLI_ARGS_destroy="-force"
+      - TF_DATA_DIR=/tmp
+    volumes:
+      - $PWD:/app
+    working_dir: /app
+    entrypoint: 
+      - sh
+      - ./scripts/execute_terraform_aws.sh
+  validate-serverless-infra:
+    extends: terraform
+    env_file: .env
+    environment:
+      TF_VAR_environment: "production"
+    command:
+      - plan
+      - --input=false
+  deploy-serverless-infra:
+    extends: terraform
+    env_file: .env
+    environment:
+      TF_VAR_environment: "production"
+    command:
+      - apply
+      - --auto-approve=true
+      - --input=false
+  deploy-serverless-domain:
+    extends: serverless
+    env_file: .env
+    environment:
+      ENVIRONMENT: "production"
+    command:
+      - create_domain
+      - --stage
+      - v1
+  deploy-serverless-functions:
+    extends: serverless
+    env_file: .env
+    environment:
+      ENVIRONMENT: "production"
+    command:
+      - deploy
+      - --stage
+      - v1
+  deploy-serverless-infra-test:
+    extends: terraform
+    env_file: .env.integration
+    environment:
+      TF_VAR_no_certs: "true"
+      TF_VAR_environment: "test"
+    command:
+      - apply
+      - --auto-approve=true
+      - --input=false
+  deploy-serverless-functions-test:
+    extends: serverless
+    env_file: .env.integration
+    environment:
+      ENVIRONMENT: "test"
+    command:
+      - deploy
+      - --stage
+      - develop

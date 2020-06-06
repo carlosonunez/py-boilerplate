@@ -1,92 +1,66 @@
 version: '2.2'
+volumes:
+  coverage:
 services:
-  selenium:
-    image: selenium/standalone-chrome-debug
-    environment:
-      ENVIRONMENT: test
-    volumes:
-      - /dev/shm:/dev/shm
-    ports:
-      - 4444:4444
-      - 5900:5900
-  dynamodb:
-    image: amazon/dynamodb-local
-    ports:
-      - 8000:8000
   python:
     build:
       context: .
-    env_file: .env
+      args:
+        APP_NAME: my_awesome_app # change this to your app's name
     environment:
-      PIP_NO_CACHE_DIR: "off"
-      PYTHONDONTWRITEBYTECODE: 1 # disable generating __pycache__ directories.
-    volumes:
-      - $PWD:/app:ro,delegated
-    working_dir: /app
-    entrypoint: sh
+      PYHTONDONTWRITEBYTECODE: 1
+    entrypoint: python
     command:
-      - "-c"
-      - "echo not meant to be run with the stack"
-  vendor:
+      - -c
+      - "print('Use unit, lint or app instead.')"
+  app:
+    env_file: .env.test
+    depends_on:
+      - database
     build:
       context: .
-      args:
-        IS_FOR_VENDORING_SERVICE: "true"
-    env_file: .env
-    entrypoint: pip
-    user: root
-    volumes:
-      - "$PWD/vendor:/vendor"
-      - "$PWD/requirements.txt:/requirements.txt"
-    command:
-      - install
-      - --target
-      - /vendor
-      - -r
-      - /requirements.txt
-  lint:
-    extends: python
-    entrypoint: pylint
-    command:
-      - -E
-  unit:
-    depends_on:
-      - dynamodb
-    extends: python
-    entrypoint: python
-    environment:
-      ENVIRONMENT: test
-      PYTHONPATH: ./vendor
-      TRIPIT_APP_CLIENT_ID: fake-client-id
-      TRIPIT_APP_CLIENT_SECRET: fake-client-secret
-      AWS_DYNAMODB_ENDPOINT_URL: http://dynamodb:8000
-    command:
-      - -m
-      - pytest
-      - --maxfail=1
-      - -s
-      - -m
-      - unit
-      - /app/tests
+    entrypoint:
+      - python
+      - main.py
   integration:
-    depends_on:
-      - selenium
-    extends: python
+    build:
+      context: .
     entrypoint: python
-    environment:
-      ENVIRONMENT: test
-      PYTHONPATH: ./vendor
-      TRIPIT_APP_CLIENT_ID: fake-client-id
-      TRIPIT_APP_CLIENT_SECRET: fake-client-secret
-      SELENIUM_HOST: selenium
-      SELENIUM_PORT: 4444
-    volumes:
-      - "$PWD/secrets:/secrets"
+    env_file: .env.test
     command:
       - -m
       - pytest
+      - --disable-pytest-warnings
       - --maxfail=1
-      - -s
       - -m
       - integration
-      - /app/tests
+      - tests/
+  unit:
+    volumes:
+      - coverage:/tmp
+    build:
+      context: .
+    entrypoint: coverage
+    env_file: .env.test
+    environment:
+      COVERAGE_FILE: /tmp/.coverage
+    command:
+      - run
+      - -m
+      - pytest
+      - --disable-pytest-warnings
+      - --maxfail=1
+      - -m
+      - unit
+      - tests/
+  coverage:
+    volumes:
+      - coverage:/tmp
+    build:
+      context: .
+    entrypoint: coverage
+    env_file: .env.test
+    environment:
+      COVERAGE_FILE: /tmp/.coverage
+    command:
+      - report
